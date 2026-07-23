@@ -12,7 +12,7 @@ import java.util.List;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "kitchen_expert.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 4;
 
     // Table names
     public static final String TABLE_MASAKAN = "masakan";
@@ -32,7 +32,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE " + TABLE_BAHAN + " (id_bahan INTEGER PRIMARY KEY AUTOINCREMENT, nama_bahan TEXT)");
         db.execSQL("CREATE TABLE " + TABLE_MASAKAN + " (id_masakan INTEGER PRIMARY KEY AUTOINCREMENT, nama_masakan TEXT, resep TEXT, cara_masak TEXT, kategori TEXT, image_path TEXT)");
         db.execSQL("CREATE TABLE " + TABLE_RULE + " (id_rule INTEGER PRIMARY KEY AUTOINCREMENT, id_masakan INTEGER, id_bahan INTEGER)");
-        db.execSQL("CREATE TABLE " + TABLE_HISTORY + " (id_history INTEGER PRIMARY KEY AUTOINCREMENT, tanggal TEXT, hasil_masakan TEXT, bahan_input TEXT)");
+        db.execSQL("CREATE TABLE " + TABLE_HISTORY + " (id_history INTEGER PRIMARY KEY AUTOINCREMENT, tanggal TEXT, hasil_masakan TEXT, bahan_input TEXT, id_masakan INTEGER)");
 
         // Initial Data
         db.execSQL("INSERT INTO " + TABLE_ADMIN + " (username, password) VALUES ('admin', 'admin123')");
@@ -51,16 +51,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
 
         // Seed 10 Masakan
-        insertMasakan(db, "Nasi Goreng Specials", "Nasi, Telur, Bumbu", "Tumis bumbu, masukkan telur, masukkan nasi.", "Utama");
-        insertMasakan(db, "Soto Ayam Lamongan", "Ayam, Kunyit, Soun", "Rebus ayam dengan bumbu, sajikan dengan soun.", "Sup");
-        insertMasakan(db, "Rendang Padang", "Daging Sapi, Santan, Rempah", "Masak daging dengan santan hingga kering.", "Daging");
-        insertMasakan(db, "Gado-Gado Jakarta", "Sayuran, Kacang, Tahu", "Rebus sayuran, sajikan dengan bumbu kacang.", "Salad");
-        insertMasakan(db, "Sayur Sop", "Wortel, Kentang, Ayam", "Rebus sayuran dan ayam dalam kaldu bening.", "Sup");
-        insertMasakan(db, "Opor Ayam", "Ayam, Santan, Kemiri", "Masak ayam dalam kuah santan kuning.", "Daging");
-        insertMasakan(db, "Tumis Kangkung", "Kangkung, Bawang, Cabai", "Tumis kangkung dengan bawang dan cabai.", "Sayuran");
-        insertMasakan(db, "Semur Daging", "Daging Sapi, Kecap, Kentang", "Masak daging dengan kecap manis dan kentang.", "Daging");
-        insertMasakan(db, "Perkedel Kentang", "Kentang, Telur, Seledri", "Haluskan kentang, campur telur, lalu goreng.", "Lauk");
-        insertMasakan(db, "Bakwan Jagung", "Jagung, Tepung, Daun Bawang", "Campur jagung dengan adonan tepung, goreng.", "Camilan");
+        insertMasakan(db, "Nasi Goreng Specials", "Nasi, Telur, Bumbu", "Tumis bumbu, masukkan telur, masukkan nasi.", "Utama", "");
+        insertMasakan(db, "Soto Ayam Lamongan", "Ayam, Kunyit, Soun", "Rebus ayam dengan bumbu, sajikan dengan soun.", "Sup", "");
+        insertMasakan(db, "Rendang Padang", "Daging Sapi, Santan, Rempah", "Masak daging with santan hingga kering.", "Daging", "");
+        insertMasakan(db, "Gado-Gado Jakarta", "Sayuran, Kacang, Tahu", "Rebus sayuran, sajikan with bumbu kacang.", "Salad", "");
+        insertMasakan(db, "Sayur Sop", "Wortel, Kentang, Ayam", "Rebus sayuran dan ayam dalam kaldu bening.", "Sup", "");
+        insertMasakan(db, "Opor Ayam", "Ayam, Santan, Kemiri", "Masak ayam dalam kuah santan kuning.", "Daging", "");
+        insertMasakan(db, "Tumis Kangkung", "Kangkung, Bawang, Cabai", "Tumis kangkung with bawang dan cabai.", "Sayuran", "");
+        insertMasakan(db, "Semur Daging", "Daging Sapi, Kecap, Kentang", "Masak daging with kecap manis dan kentang.", "Daging", "");
+        insertMasakan(db, "Perkedel Kentang", "Kentang, Telur, Seledri", "Haluskan kentang, campur telur, lalu goreng.", "Lauk", "");
+        insertMasakan(db, "Bakwan Jagung", "Jagung, Tepung, Daun Bawang", "Campur jagung with adonan tepung, goreng.", "Camilan", "");
 
         // Seed 40+ Rules (id_masakan, id_bahan)
         // Nasi Goreng (1): Bawang Merah(1), Bawang Putih(2), Cabai(3), Garam(5), Telur(8), Kecap(19)
@@ -82,12 +82,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    private void insertMasakan(SQLiteDatabase db, String nama, String resep, String cara, String kategori) {
+    private void insertMasakan(SQLiteDatabase db, String nama, String resep, String cara, String kategori, String imagePath) {
         ContentValues cv = new ContentValues();
         cv.put("nama_masakan", nama);
         cv.put("resep", resep);
         cv.put("cara_masak", cara);
         cv.put("kategori", kategori);
+        cv.put("image_path", imagePath);
         db.insert(TABLE_MASAKAN, null, cv);
     }
 
@@ -116,10 +117,24 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         cursor.getString(cursor.getColumnIndexOrThrow("kategori")),
                         cursor.getString(cursor.getColumnIndexOrThrow("image_path"))
                 );
+                masakan.setBahanIds(getBahanForMasakan(masakan.getId()));
                 list.add(masakan);
             } while (cursor.moveToNext());
         }
         cursor.close();
         return list;
+    }
+
+    public List<Integer> getBahanForMasakan(int masakanId) {
+        List<Integer> ids = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery("SELECT id_bahan FROM " + TABLE_RULE + " WHERE id_masakan = ?", new String[]{String.valueOf(masakanId)});
+        if (cursor.moveToFirst()) {
+            do {
+                ids.add(cursor.getInt(0));
+            } while (cursor.moveToNext());
+        }
+        cursor.close();
+        return ids;
     }
 }

@@ -14,14 +14,20 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
     private List<History> list;
     private boolean isSelectionMode = false;
     private OnSelectionListener listener;
+    private OnItemClickListener itemClickListener;
 
     public interface OnSelectionListener {
         void onSelectionChanged();
     }
 
-    public HistoryAdapter(List<History> list, OnSelectionListener listener) {
+    public interface OnItemClickListener {
+        void onItemClick(History history);
+    }
+
+    public HistoryAdapter(List<History> list, OnSelectionListener listener, OnItemClickListener itemClickListener) {
         this.list = list;
         this.listener = listener;
+        this.itemClickListener = itemClickListener;
     }
 
     @NonNull
@@ -62,6 +68,8 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
                 boolean nextState = !item.isSelected();
                 item.setSelected(nextState);
                 holder.binding.cbHistory.setChecked(nextState);
+            } else {
+                if (itemClickListener != null) itemClickListener.onItemClick(item);
             }
         });
     }

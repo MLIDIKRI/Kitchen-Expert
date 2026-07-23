@@ -2,14 +2,14 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/nav_home"
-        android:icon="@android:drawable/ic_menu_today"
+        android:icon="@drawable/ic_home_24"
         android:title="Beranda" />
     <item
         android:id="@+id/nav_history"
-        android:icon="@android:drawable/ic_menu_recent_history"
+        android:icon="@drawable/ic_history_24"
         android:title="Riwayat" />
     <item
         android:id="@+id/nav_about"
-        android:icon="@android:drawable/ic_menu_info_details"
+        android:icon="@drawable/ic_info_24"
         android:title="Tentang" />
 </menu>

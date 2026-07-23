@@ -12,6 +12,13 @@
     <color name="surface">#fbf8ff</color>
     <color name="surfaceVariant">#e3e1ec</color>
     <color name="onSurfaceVariant">#5b4137</color>
+    <color name="onSurface">#1A1B22</color>
+    <color name="outline">#E4E4E7</color>
+    <color name="primaryFixed">#ffdbce</color>
+    <color name="surfaceContainerHighest">#e3e1ec</color>
+    <color name="surfaceContainerHigh">#e8e7f1</color>
+    <color name="surfaceContainerLow">#f4f2fd</color>
+    <color name="surfaceContainerLowest">#ffffff</color>
     <color name="outlineVariant">#e4beb1</color>
     <color name="white">#FFFFFF</color>
     <color name="orange">#FD7613</color>

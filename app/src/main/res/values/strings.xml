@@ -10,4 +10,22 @@
     <string name="info_aplikasi">Info aplikasi</string>
     <string name="inspirasi_masakan">Inspirasi Masakan</string>
     <string name="lihat_semua">Lihat Semua</string>
+    <string name="versi">Versi 1.0.0</string>
+    <string name="cerdas_personal">Cerdas &amp; Personal</string>
+    <string name="cerdas_personal_desc">Rekomendasi yang disesuaikan dengan bahan yang Anda miliki.</string>
+    <string name="koleksi_resep">Koleksi Resep Luas</string>
+    <string name="koleksi_resep_desc">Ribuan resep nusantara dan mancanegara di ujung jari Anda.</string>
+    <string name="terpercaya">Terpercaya</string>
+    <string name="terpercaya_desc">Dikembangkan dengan basis pengetahuan pakar kuliner.</string>
+    <string name="kembali">Kembali</string>
+    <string name="copyright">© 2024 KitchenExpert Team. Hak Cipta Dilindungi.</string>
+    <string name="slogan">Sistem Pakar Rekomendasi Masakan</string>
+    <string name="bahan_digunakan">Bahan yang digunakan:</string>
+    <string name="ubah">Ubah</string>
+    <string name="resep_ditemukan">%1$d Resep Ditemukan</string>
+    <string name="urutkan">Urutkan:</string>
+    <string name="terpopuler">Terpopuler</string>
+    <string name="terbaik">Terbaik</string>
+    <string name="ingin_mencoba_lain">Ingin mencoba sesuatu yang lain?</string>
+    <string name="cari_resep_lainnya">Cari Resep Lainnya</string>
 </resources>

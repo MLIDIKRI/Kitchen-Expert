@@ -35,18 +35,17 @@ public class RecipeDetailActivity extends AppCompatActivity {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
         Cursor cursor = db.rawQuery("SELECT * FROM " + DatabaseHelper.TABLE_MASAKAN + " WHERE id_masakan = ?", new String[]{String.valueOf(id)});
         if (cursor.moveToFirst()) {
-            String nama = cursor.getString(1);
-            String resep = cursor.getString(2);
-            String cara = cursor.getString(3);
-            String kategori = cursor.getString(4);
+            String nama = cursor.getString(cursor.getColumnIndexOrThrow("nama_masakan"));
+            String resep = cursor.getString(cursor.getColumnIndexOrThrow("resep"));
+            String cara = cursor.getString(cursor.getColumnIndexOrThrow("cara_masak"));
+            String kategori = cursor.getString(cursor.getColumnIndexOrThrow("kategori"));
 
             binding.toolbarLayout.setTitle(nama);
             binding.tvDetailNama.setText(nama);
-            binding.tvDetailKategori.setText(kategori);
             binding.tvDetailBahan.setText(resep);
             binding.tvDetailCara.setText(cara);
 
-            String imagePath = cursor.getString(5);
+            String imagePath = cursor.getString(cursor.getColumnIndexOrThrow("image_path"));
             if (imagePath != null && !imagePath.isEmpty()) {
                 java.io.File imgFile = new java.io.File(imagePath);
                 if (imgFile.exists()) {

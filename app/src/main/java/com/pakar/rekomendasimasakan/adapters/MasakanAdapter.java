@@ -1,67 +1,74 @@
 package com.pakar.rekomendasimasakan.adapters;
 
+import android.graphics.BitmapFactory;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-import com.pakar.rekomendasimasakan.databinding.ItemMasakanBinding;
+import com.pakar.rekomendasimasakan.R;
 import com.pakar.rekomendasimasakan.models.Masakan;
+import java.io.File;
 import java.util.List;
 import java.util.Locale;
 
 public class MasakanAdapter extends RecyclerView.Adapter<MasakanAdapter.ViewHolder> {
 
-    private List<Masakan> list;
+    private List<Masakan> listMasakan;
     private OnItemClickListener listener;
 
     public interface OnItemClickListener {
-        void onItemClick(Masakan item);
+        void onItemClick(Masakan masakan);
     }
 
-    public MasakanAdapter(List<Masakan> list, OnItemClickListener listener) {
-        this.list = list;
+    public MasakanAdapter(List<Masakan> listMasakan, OnItemClickListener listener) {
+        this.listMasakan = listMasakan;
         this.listener = listener;
     }
 
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        ItemMasakanBinding binding = ItemMasakanBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
-        return new ViewHolder(binding);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_masakan, parent, false);
+        return new ViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Masakan item = list.get(position);
-        holder.binding.tvNama.setText(item.getNama());
-        holder.binding.tvKategori.setText(item.getKategori());
-        holder.binding.tvMatch.setText(String.format(Locale.getDefault(), "Kecocokan: %.0f%%", item.getMatchPercentage()));
-        
-        if (item.getImagePath() != null && !item.getImagePath().isEmpty()) {
-            java.io.File imgFile = new java.io.File(item.getImagePath());
+        Masakan masakan = listMasakan.get(position);
+        holder.tvNama.setText(masakan.getNama());
+        holder.tvMatch.setText(String.format(Locale.getDefault(), "%.0f%%", masakan.getMatchPercentage()));
+
+        if (masakan.getImagePath() != null && !masakan.getImagePath().isEmpty()) {
+            File imgFile = new File(masakan.getImagePath());
             if (imgFile.exists()) {
-                holder.binding.imgMasakan.setImageBitmap(android.graphics.BitmapFactory.decodeFile(imgFile.getAbsolutePath()));
-                holder.binding.imgMasakan.setColorFilter(null);
+                holder.imgMasakan.setImageBitmap(BitmapFactory.decodeFile(imgFile.getAbsolutePath()));
             } else {
-                holder.binding.imgMasakan.setImageResource(android.R.drawable.ic_menu_gallery);
+                holder.imgMasakan.setImageResource(R.drawable.img_splash);
             }
         } else {
-            holder.binding.imgMasakan.setImageResource(android.R.drawable.ic_menu_gallery);
+            holder.imgMasakan.setImageResource(R.drawable.img_splash);
         }
 
-        holder.itemView.setOnClickListener(v -> listener.onItemClick(item));
+        holder.itemView.setOnClickListener(v -> listener.onItemClick(masakan));
     }
 
     @Override
     public int getItemCount() {
-        return list.size();
+        return listMasakan.size();
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        ItemMasakanBinding binding;
-        public ViewHolder(ItemMasakanBinding binding) {
-            super(binding.getRoot());
-            this.binding = binding;
+        ImageView imgMasakan;
+        TextView tvNama, tvMatch;
+
+        public ViewHolder(@NonNull View itemView) {
+            super(itemView);
+            imgMasakan = itemView.findViewById(R.id.imgMasakan);
+            tvNama = itemView.findViewById(R.id.tvNama);
+            tvMatch = itemView.findViewById(R.id.tvMatch);
         }
     }
 }

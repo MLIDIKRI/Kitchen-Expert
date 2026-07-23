@@ -54,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
 
         InspirationAdapter adapter = new InspirationAdapter(masakanList, masakan -> {
             Intent intent = new Intent(MainActivity.this, RecipeDetailActivity.class);
-            intent.putExtra("id_masakan", masakan.getId());
+            intent.putExtra("masakan_id", masakan.getId());
             startActivity(intent);
         });
 
@@ -70,12 +70,20 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             } else if (id == R.id.nav_history) {
                 startActivity(new Intent(MainActivity.this, HistoryActivity.class));
+                overridePendingTransition(0, 0);
                 return true;
             } else if (id == R.id.nav_about) {
                 startActivity(new Intent(MainActivity.this, AboutActivity.class));
+                overridePendingTransition(0, 0);
                 return true;
             }
             return false;
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        binding.bottomNavigation.setSelectedItemId(R.id.nav_home);
     }
 }

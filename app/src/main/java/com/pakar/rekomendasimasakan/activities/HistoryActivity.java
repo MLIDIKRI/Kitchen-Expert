@@ -1,5 +1,6 @@
 package com.pakar.rekomendasimasakan.activities;
 
+import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
@@ -7,6 +8,7 @@ import android.view.View;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import com.pakar.rekomendasimasakan.R;
 import com.pakar.rekomendasimasakan.adapters.HistoryAdapter;
 import com.pakar.rekomendasimasakan.database.DatabaseHelper;
 import com.pakar.rekomendasimasakan.databinding.ActivityHistoryBinding;
@@ -42,7 +44,33 @@ public class HistoryActivity extends AppCompatActivity {
 
         binding.btnDeleteSelected.setOnClickListener(v -> confirmDelete());
 
+        setupBottomNavigation();
         loadData();
+    }
+
+    private void setupBottomNavigation() {
+        binding.bottomNavigation.setSelectedItemId(R.id.nav_history);
+        binding.bottomNavigation.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_home) {
+                startActivity(new Intent(HistoryActivity.this, MainActivity.class));
+                overridePendingTransition(0, 0);
+                return true;
+            } else if (id == R.id.nav_history) {
+                return true;
+            } else if (id == R.id.nav_about) {
+                startActivity(new Intent(HistoryActivity.this, AboutActivity.class));
+                overridePendingTransition(0, 0);
+                return true;
+            }
+            return false;
+        });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        binding.bottomNavigation.setSelectedItemId(R.id.nav_history);
     }
 
     private void loadData() {
@@ -52,10 +80,11 @@ public class HistoryActivity extends AppCompatActivity {
         if (cursor.moveToFirst()) {
             do {
                 historyList.add(new History(
-                        cursor.getInt(0),
-                        cursor.getString(1),
-                        cursor.getString(2),
-                        cursor.getString(3)
+                        cursor.getInt(cursor.getColumnIndexOrThrow("id_history")),
+                        cursor.getString(cursor.getColumnIndexOrThrow("tanggal")),
+                        cursor.getString(cursor.getColumnIndexOrThrow("hasil_masakan")),
+                        cursor.getString(cursor.getColumnIndexOrThrow("bahan_input")),
+                        cursor.getInt(cursor.getColumnIndexOrThrow("id_masakan"))
                 ));
             } while (cursor.moveToNext());
         }
@@ -68,6 +97,10 @@ public class HistoryActivity extends AppCompatActivity {
             } else {
                 binding.layoutSelection.setVisibility(View.GONE);
             }
+        }, history -> {
+            Intent intent = new Intent(HistoryActivity.this, RecipeDetailActivity.class);
+            intent.putExtra("masakan_id", history.getMasakanId());
+            startActivity(intent);
         });
         binding.rvHistory.setLayoutManager(new LinearLayoutManager(this));
         binding.rvHistory.setAdapter(adapter);
