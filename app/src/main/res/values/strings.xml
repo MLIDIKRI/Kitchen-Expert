@@ -1,3 +1,13 @@
 <resources>
-    <string name="app_name">Rekomendasi Masakan</string>
+    <string name="app_name">KitchenExpert</string>
+    <string name="pilih_bahan">Pilih Bahan</string>
+    <string name="cari_resep_kulkas">Cari resep dari isi kulkasmu</string>
+    <string name="mulai_memasak">Mulai Memasak</string>
+    <string name="riwayat">Riwayat</string>
+    <string name="tentang">Tentang</string>
+    <string name="beranda">Beranda</string>
+    <string name="resep_dicoba">Resep dicoba</string>
+    <string name="info_aplikasi">Info aplikasi</string>
+    <string name="inspirasi_masakan">Inspirasi Masakan</string>
+    <string name="lihat_semua">Lihat Semua</string>
 </resources>

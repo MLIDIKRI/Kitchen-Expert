@@ -2,8 +2,12 @@ package com.pakar.rekomendasimasakan.database;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import com.pakar.rekomendasimasakan.models.Masakan;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
@@ -95,5 +99,27 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_RULE);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_HISTORY);
         onCreate(db);
+    }
+
+    public List<Masakan> getAllMasakan() {
+        List<Masakan> list = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_MASAKAN, null);
+
+        if (cursor.moveToFirst()) {
+            do {
+                Masakan masakan = new Masakan(
+                        cursor.getInt(cursor.getColumnIndexOrThrow("id_masakan")),
+                        cursor.getString(cursor.getColumnIndexOrThrow("nama_masakan")),
+                        cursor.getString(cursor.getColumnIndexOrThrow("resep")),
+                        cursor.getString(cursor.getColumnIndexOrThrow("cara_masak")),
+                        cursor.getString(cursor.getColumnIndexOrThrow("kategori")),
+                        cursor.getString(cursor.getColumnIndexOrThrow("image_path"))
+                );
+                list.add(masakan);
+            } while (cursor.moveToNext());
+        }
+        cursor.close();
+        return list;
     }
 }
