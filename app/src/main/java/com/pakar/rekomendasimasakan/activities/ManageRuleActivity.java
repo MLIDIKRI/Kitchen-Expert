@@ -3,10 +3,13 @@ package com.pakar.rekomendasimasakan.activities;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
 import android.widget.Spinner;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
@@ -14,6 +17,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import com.google.android.material.textfield.TextInputEditText;
 import com.pakar.rekomendasimasakan.R;
 import com.pakar.rekomendasimasakan.database.DatabaseHelper;
 import com.pakar.rekomendasimasakan.databinding.ActivityManageRuleBinding;
@@ -63,7 +67,9 @@ public class ManageRuleActivity extends AppCompatActivity {
     private void showDialog(RuleItem existingItem) {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_rule, null);
         Spinner spMasakan = view.findViewById(R.id.spMasakan);
-        Spinner spBahan = view.findViewById(R.id.spBahan);
+        RecyclerView rvBahanMulti = view.findViewById(R.id.rvBahanMulti);
+        CheckBox cbSelectAll = view.findViewById(R.id.cbSelectAll);
+        TextInputEditText etSearchBahan = view.findViewById(R.id.etSearchBahan);
 
         List<IdName> masakanList = getIdNames(DatabaseHelper.TABLE_MASAKAN, "id_masakan", "nama_masakan");
         List<IdName> bahanList = getIdNames(DatabaseHelper.TABLE_BAHAN, "id_bahan", "nama_bahan");
@@ -74,9 +80,27 @@ public class ManageRuleActivity extends AppCompatActivity {
         }
 
         spMasakan.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, masakanList));
-        spBahan.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, bahanList));
+        
+        List<SelectableBahan> selectableBahans = new ArrayList<>();
+        for (IdName b : bahanList) {
+            boolean isSelected = (existingItem != null && b.id == existingItem.bahanId);
+            selectableBahans.add(new SelectableBahan(b, isSelected));
+        }
 
-        // If editing, set selection
+        SelectBahanAdapter bahanAdapter = new SelectBahanAdapter(selectableBahans);
+        rvBahanMulti.setLayoutManager(new LinearLayoutManager(this));
+        rvBahanMulti.setAdapter(bahanAdapter);
+
+        cbSelectAll.setOnCheckedChangeListener((buttonView, isChecked) -> bahanAdapter.selectAll(isChecked));
+
+        etSearchBahan.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                bahanAdapter.filter(s.toString());
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+
         if (existingItem != null) {
             for (int i = 0; i < masakanList.size(); i++) {
                 if (masakanList.get(i).id == existingItem.masakanId) {
@@ -84,12 +108,7 @@ public class ManageRuleActivity extends AppCompatActivity {
                     break;
                 }
             }
-            for (int i = 0; i < bahanList.size(); i++) {
-                if (bahanList.get(i).id == existingItem.bahanId) {
-                    spBahan.setSelection(i);
-                    break;
-                }
-            }
+            cbSelectAll.setVisibility(View.GONE);
         }
 
         new AlertDialog.Builder(this)
@@ -97,21 +116,37 @@ public class ManageRuleActivity extends AppCompatActivity {
             .setView(view)
             .setPositiveButton("Simpan", (dialog, which) -> {
                 int masakanId = ((IdName) spMasakan.getSelectedItem()).id;
-                int bahanId = ((IdName) spBahan.getSelectedItem()).id;
-                
-                if (existingItem == null) {
-                    if (isRuleExist(masakanId, bahanId)) {
-                        Toast.makeText(this, "Rule sudah ada", Toast.LENGTH_SHORT).show();
-                    } else {
-                        dbHelper.getWritableDatabase().execSQL("INSERT INTO " + DatabaseHelper.TABLE_RULE + " (id_masakan, id_bahan) VALUES (?, ?)", new Object[]{masakanId, bahanId});
-                        loadData();
-                        Toast.makeText(this, "Rule berhasil ditambahkan", Toast.LENGTH_SHORT).show();
-                    }
-                } else {
-                    dbHelper.getWritableDatabase().execSQL("UPDATE " + DatabaseHelper.TABLE_RULE + " SET id_masakan = ?, id_bahan = ? WHERE id_rule = ?", new Object[]{masakanId, bahanId, existingItem.id});
-                    loadData();
-                    Toast.makeText(this, "Rule berhasil diupdate", Toast.LENGTH_SHORT).show();
+                List<Integer> selectedBahanIds = bahanAdapter.getSelectedIds();
+
+                if (selectedBahanIds.isEmpty()) {
+                    Toast.makeText(this, "Pilih minimal satu bahan", Toast.LENGTH_SHORT).show();
+                    return;
                 }
+                
+                SQLiteDatabase db = dbHelper.getWritableDatabase();
+                db.beginTransaction();
+                try {
+                    if (existingItem == null) {
+                        int addedCount = 0;
+                        for (Integer bId : selectedBahanIds) {
+                            if (!isRuleExist(masakanId, bId)) {
+                                db.execSQL("INSERT INTO " + DatabaseHelper.TABLE_RULE + " (id_masakan, id_bahan) VALUES (?, ?)", new Object[]{masakanId, bId});
+                                addedCount++;
+                            }
+                        }
+                        Toast.makeText(this, addedCount + " Rule berhasil ditambahkan", Toast.LENGTH_SHORT).show();
+                    } else {
+                        int bId = selectedBahanIds.get(0);
+                        db.execSQL("UPDATE " + DatabaseHelper.TABLE_RULE + " SET id_masakan = ?, id_bahan = ? WHERE id_rule = ?", new Object[]{masakanId, bId, existingItem.id});
+                        Toast.makeText(this, "Rule berhasil diupdate", Toast.LENGTH_SHORT).show();
+                    }
+                    db.setTransactionSuccessful();
+                } catch (Exception e) {
+                    Toast.makeText(this, "Terjadi kesalahan saat menyimpan", Toast.LENGTH_SHORT).show();
+                } finally {
+                    db.endTransaction();
+                }
+                loadData();
             })
             .setNegativeButton("Batal", null)
             .show();
@@ -150,6 +185,66 @@ public class ManageRuleActivity extends AppCompatActivity {
         int id; String name;
         IdName(int id, String name) { this.id = id; this.name = name; }
         @NonNull @Override public String toString() { return name; }
+    }
+
+    private static class SelectableBahan {
+        IdName data; boolean isSelected;
+        SelectableBahan(IdName data, boolean isSelected) { this.data = data; this.isSelected = isSelected; }
+    }
+
+    private static class SelectBahanAdapter extends RecyclerView.Adapter<SelectBahanAdapter.ViewHolder> {
+        private List<SelectableBahan> allItems;
+        private List<SelectableBahan> filteredItems;
+
+        SelectBahanAdapter(List<SelectableBahan> list) {
+            this.allItems = list;
+            this.filteredItems = new ArrayList<>(list);
+        }
+
+        void filter(String query) {
+            filteredItems.clear();
+            if (query.isEmpty()) {
+                filteredItems.addAll(allItems);
+            } else {
+                String q = query.toLowerCase();
+                for (SelectableBahan item : allItems) {
+                    if (item.data.name.toLowerCase().contains(q)) {
+                        filteredItems.add(item);
+                    }
+                }
+            }
+            notifyDataSetChanged();
+        }
+
+        void selectAll(boolean isSelected) {
+            for (SelectableBahan item : allItems) item.isSelected = isSelected;
+            notifyDataSetChanged();
+        }
+
+        List<Integer> getSelectedIds() {
+            List<Integer> ids = new ArrayList<>();
+            for (SelectableBahan item : allItems) if (item.isSelected) ids.add(item.data.id);
+            return ids;
+        }
+
+        @NonNull @Override public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            CheckBox cb = new CheckBox(parent.getContext());
+            cb.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            cb.setPadding(16, 8, 16, 8);
+            return new ViewHolder(cb);
+        }
+        @Override public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+            SelectableBahan item = filteredItems.get(position);
+            holder.cb.setText(item.data.name);
+            holder.cb.setOnCheckedChangeListener(null);
+            holder.cb.setChecked(item.isSelected);
+            holder.cb.setOnCheckedChangeListener((v, isChecked) -> item.isSelected = isChecked);
+        }
+        @Override public int getItemCount() { return filteredItems.size(); }
+        static class ViewHolder extends RecyclerView.ViewHolder {
+            CheckBox cb;
+            ViewHolder(View v) { super(v); this.cb = (CheckBox) v; }
+        }
     }
 
     private class RuleAdapter extends RecyclerView.Adapter<RuleAdapter.ViewHolder> {
