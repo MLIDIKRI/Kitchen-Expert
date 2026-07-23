@@ -23,7 +23,9 @@ import com.pakar.rekomendasimasakan.database.DatabaseHelper;
 import com.pakar.rekomendasimasakan.databinding.ActivityManageRuleBinding;
 import com.pakar.rekomendasimasakan.databinding.ItemManageRuleBinding;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ManageRuleActivity extends AppCompatActivity {
 
@@ -45,19 +47,39 @@ public class ManageRuleActivity extends AppCompatActivity {
     }
 
     private void loadData() {
-        List<RuleItem> list = new ArrayList<>();
         SQLiteDatabase db = dbHelper.getReadableDatabase();
-        String query = "SELECT r.id_rule, m.nama_masakan, b.nama_bahan, r.id_masakan, r.id_bahan FROM " + DatabaseHelper.TABLE_RULE + " r " +
-                "JOIN " + DatabaseHelper.TABLE_MASAKAN + " m ON r.id_masakan = m.id_masakan " +
+        // Join masakan with rules and bahans
+        String query = "SELECT m.id_masakan, m.nama_masakan, b.nama_bahan, b.id_bahan " +
+                "FROM " + DatabaseHelper.TABLE_MASAKAN + " m " +
+                "JOIN " + DatabaseHelper.TABLE_RULE + " r ON m.id_masakan = r.id_masakan " +
                 "JOIN " + DatabaseHelper.TABLE_BAHAN + " b ON r.id_bahan = b.id_bahan " +
-                "ORDER BY r.id_rule DESC";
+                "ORDER BY m.nama_masakan ASC";
+        
         Cursor cursor = db.rawQuery(query, null);
+        Map<Integer, RuleItem> map = new LinkedHashMap<>();
+        
         if (cursor.moveToFirst()) {
             do {
-                list.add(new RuleItem(cursor.getInt(0), cursor.getString(1), cursor.getString(2), cursor.getInt(3), cursor.getInt(4)));
+                int mId = cursor.getInt(0);
+                String mName = cursor.getString(1);
+                String bName = cursor.getString(2);
+                int bId = cursor.getInt(3);
+                
+                if (!map.containsKey(mId)) {
+                    map.put(mId, new RuleItem(mName, "", mId, new ArrayList<>()));
+                }
+                
+                RuleItem item = map.get(mId);
+                if (item != null) {
+                    item.bahanIds.add(bId);
+                    if (item.bahan.isEmpty()) item.bahan = bName;
+                    else item.bahan += ", " + bName;
+                }
             } while (cursor.moveToNext());
         }
         cursor.close();
+        
+        List<RuleItem> list = new ArrayList<>(map.values());
 
         RuleAdapter adapter = new RuleAdapter(list);
         binding.rvManageRules.setLayoutManager(new LinearLayoutManager(this));
@@ -83,7 +105,10 @@ public class ManageRuleActivity extends AppCompatActivity {
         
         List<SelectableBahan> selectableBahans = new ArrayList<>();
         for (IdName b : bahanList) {
-            boolean isSelected = (existingItem != null && b.id == existingItem.bahanId);
+            boolean isSelected = false;
+            if (existingItem != null) {
+                isSelected = existingItem.bahanIds.contains(b.id);
+            }
             selectableBahans.add(new SelectableBahan(b, isSelected));
         }
 
@@ -108,7 +133,7 @@ public class ManageRuleActivity extends AppCompatActivity {
                     break;
                 }
             }
-            cbSelectAll.setVisibility(View.GONE);
+            spMasakan.setEnabled(false);
         }
 
         new AlertDialog.Builder(this)
@@ -126,21 +151,12 @@ public class ManageRuleActivity extends AppCompatActivity {
                 SQLiteDatabase db = dbHelper.getWritableDatabase();
                 db.beginTransaction();
                 try {
-                    if (existingItem == null) {
-                        int addedCount = 0;
-                        for (Integer bId : selectedBahanIds) {
-                            if (!isRuleExist(masakanId, bId)) {
-                                db.execSQL("INSERT INTO " + DatabaseHelper.TABLE_RULE + " (id_masakan, id_bahan) VALUES (?, ?)", new Object[]{masakanId, bId});
-                                addedCount++;
-                            }
-                        }
-                        Toast.makeText(this, addedCount + " Rule berhasil ditambahkan", Toast.LENGTH_SHORT).show();
-                    } else {
-                        int bId = selectedBahanIds.get(0);
-                        db.execSQL("UPDATE " + DatabaseHelper.TABLE_RULE + " SET id_masakan = ?, id_bahan = ? WHERE id_rule = ?", new Object[]{masakanId, bId, existingItem.id});
-                        Toast.makeText(this, "Rule berhasil diupdate", Toast.LENGTH_SHORT).show();
+                    db.delete(DatabaseHelper.TABLE_RULE, "id_masakan = ?", new String[]{String.valueOf(masakanId)});
+                    for (Integer bId : selectedBahanIds) {
+                        db.execSQL("INSERT INTO " + DatabaseHelper.TABLE_RULE + " (id_masakan, id_bahan) VALUES (?, ?)", new Object[]{masakanId, bId});
                     }
                     db.setTransactionSuccessful();
+                    Toast.makeText(this, "Berhasil memperbarui rule masakan", Toast.LENGTH_SHORT).show();
                 } catch (Exception e) {
                     Toast.makeText(this, "Terjadi kesalahan saat menyimpan", Toast.LENGTH_SHORT).show();
                 } finally {
@@ -150,14 +166,6 @@ public class ManageRuleActivity extends AppCompatActivity {
             })
             .setNegativeButton("Batal", null)
             .show();
-    }
-
-    private boolean isRuleExist(int masakanId, int bahanId) {
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT * FROM " + DatabaseHelper.TABLE_RULE + " WHERE id_masakan = ? AND id_bahan = ?", new String[]{String.valueOf(masakanId), String.valueOf(bahanId)});
-        boolean exists = cursor.getCount() > 0;
-        cursor.close();
-        return exists;
     }
 
     private List<IdName> getIdNames(String table, String idCol, String nameCol) {
@@ -173,11 +181,12 @@ public class ManageRuleActivity extends AppCompatActivity {
     }
 
     private static class RuleItem {
-        int id, masakanId, bahanId;
+        int masakanId;
         String masakan, bahan;
-        RuleItem(int id, String masakan, String bahan, int mId, int bId) {
-            this.id = id; this.masakan = masakan; this.bahan = bahan;
-            this.masakanId = mId; this.bahanId = bId;
+        List<Integer> bahanIds;
+        RuleItem(String masakan, String bahan, int mId, List<Integer> bIds) {
+            this.masakan = masakan; this.bahan = bahan;
+            this.masakanId = mId; this.bahanIds = bIds;
         }
     }
 
@@ -193,8 +202,8 @@ public class ManageRuleActivity extends AppCompatActivity {
     }
 
     private static class SelectBahanAdapter extends RecyclerView.Adapter<SelectBahanAdapter.ViewHolder> {
-        private List<SelectableBahan> allItems;
-        private List<SelectableBahan> filteredItems;
+        private final List<SelectableBahan> allItems;
+        private final List<SelectableBahan> filteredItems;
 
         SelectBahanAdapter(List<SelectableBahan> list) {
             this.allItems = list;
@@ -248,7 +257,7 @@ public class ManageRuleActivity extends AppCompatActivity {
     }
 
     private class RuleAdapter extends RecyclerView.Adapter<RuleAdapter.ViewHolder> {
-        List<RuleItem> list;
+        private final List<RuleItem> list;
         RuleAdapter(List<RuleItem> list) { this.list = list; }
         @NonNull @Override public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             ItemManageRuleBinding b = ItemManageRuleBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
@@ -264,9 +273,9 @@ public class ManageRuleActivity extends AppCompatActivity {
             holder.b.btnDelete.setOnClickListener(v -> {
                 new AlertDialog.Builder(ManageRuleActivity.this)
                         .setTitle("Konfirmasi Hapus")
-                        .setMessage("Apakah Anda yakin ingin menghapus rule: '" + item.masakan + " - " + item.bahan + "'?")
+                        .setMessage("Apakah Anda yakin ingin menghapus semua rule untuk masakan: '" + item.masakan + "'?")
                         .setPositiveButton("Hapus", (dialog, which) -> {
-                            dbHelper.getWritableDatabase().delete(DatabaseHelper.TABLE_RULE, "id_rule = ?", new String[]{String.valueOf(item.id)});
+                            dbHelper.getWritableDatabase().delete(DatabaseHelper.TABLE_RULE, "id_masakan = ?", new String[]{String.valueOf(item.masakanId)});
                             loadData();
                         })
                         .setNegativeButton("Batal", null)
